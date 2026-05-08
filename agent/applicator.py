@@ -41,6 +41,25 @@ def login(driver: webdriver.Chrome) -> None:
     print("  Logged into Naukri")
 
 
+def upload_profile_resume(driver: webdriver.Chrome, pdf_path: Path) -> bool:
+    """Uploads the tailored PDF to the Naukri profile."""
+    try:
+        driver.get("https://www.naukri.com/mnjuser/profile")
+        time.sleep(3)
+        # Look for the Update Resume file input
+        # Usually it's an invisible input triggered by a button
+        upload = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, "input[type='file'][id='attachCV']"))
+        )
+        upload.send_keys(str(pdf_path.resolve()))
+        time.sleep(5) # Wait for upload to complete
+        print(f"  Uploaded resume to profile: {pdf_path.name}")
+        return True
+    except Exception as exc:
+        print(f"  Resume profile upload failed: {exc}")
+        return False
+
+
 def apply_to_job(job: dict, pdf_path: Path, driver: webdriver.Chrome) -> dict:
     """
     Attempts to apply to a single job.

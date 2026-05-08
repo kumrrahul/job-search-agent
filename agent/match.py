@@ -8,29 +8,32 @@ def _load_config() -> dict:
 
 def build_match_report(job: dict, jd_text: str, keywords: list[str]) -> dict:
     config = _load_config()
-    skills = _configured_skills(config)
-    aliases = config.get("keyword_aliases", {})
-    text = " ".join([jd_text, job.get("title", ""), job.get("snippet", "")]).lower()
+    my_skills = {s.lower() for s in _configured_skills(config)}
+    aliases = {k.lower(): v.lower() for k, v in config.get("keyword_aliases", {}).items()}
+    
+    # Required skills = tags from job card + keywords found in JD
+    # We use tags as the primary source of 'required' skills
+    required_skills = set(job.get("tags", []))
+    for kw in keywords:
+        required_skills.add(kw.lower())
 
     matched = []
-    missing = []
-    for skill in skills:
-        if _skill_in_text(skill, text, aliases):
-            matched.append(skill)
-        else:
-            missing.append(skill)
+    for req in required_skills:
+        # Does my profile have this required skill (or its canonical form)?
+        if req in my_skills:
+            matched.append(req)
+        elif req in aliases and aliases[req] in my_skills:
+            matched.append(aliases[req])
 
-    total = len(skills) or 1
-    skill_score = round((len(matched) / total) * 100)
-    keyword_bonus = min(len(keywords), 10)
-    match_percent = min(100, round((skill_score * 0.85) + keyword_bonus))
+    total_req = len(required_skills)
+    match_percent = round((len(matched) / max(1, total_req)) * 100)
 
     return {
         "match_percent": match_percent,
-        "matched_skills": matched,
-        "missing_skills": missing,
+        "matched_skills": list(set(matched)),
+        "missing_skills": list(required_skills - set(matched)),
         "keyword_count": len(keywords),
-        "summary": f"{match_percent}% match: {len(matched)}/{total} configured resume skills found in JD.",
+        "summary": f"{match_percent}% match: {len(matched)}/{total_req} skills required by JD are in your profile.",
     }
 
 

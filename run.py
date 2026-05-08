@@ -12,14 +12,21 @@ Usage:
 import argparse
 import traceback
 import yaml
+from datetime import datetime
+from pathlib import Path
+import shutil
 from agent.scraper    import fetch_jobs, fetch_jd, extract_keywords
 from agent.resume     import tailor_resume
-from agent.applicator import build_driver, login, apply_to_job
+from agent.applicator import build_driver, login, apply_to_job, upload_profile_resume
 from agent.reporter   import send_summary
 from agent.match      import build_match_report
+from agent            import db
 
 
 def main():
+    # Initialize database
+    db.init_db()
+
     parser = argparse.ArgumentParser(description="Naukri Job Application Agent")
     parser.add_argument("--dry-run",  action="store_true",
                         help="Tailor resumes but do not apply or email")
@@ -75,6 +82,7 @@ def main():
                     f"ATS match {job['match_report']['match_percent']}% is below "
                     f"minimum {min_match}%."
                 )
+                db.update_job_status(job["url"], job["title"], job["company"], job["status"])
                 results.append(job)
                 print(f"     Skipped: {job['error']}")
                 continue
@@ -114,10 +122,27 @@ def main():
     for r in results:
         if r.get("status") in {"failed", "skipped_low_match"} or not r.get("pdf"):
             continue
-        from pathlib import Path
+        
+        pdf_path = Path(r["pdf"])
+        # Rename to resume_<date>.pdf for profile upload
+        date_str = datetime.now().strftime("%Y%m%d")
+        new_pdf_name = f"resume_{date_str}.pdf"
+        new_pdf_path = pdf_path.parent / new_pdf_name
+        shutil.copy(pdf_path, new_pdf_path)
+        r["pdf"] = str(new_pdf_path)
+
         print(f"\n  Applying: {r['title']} @ {r['company']}")
-        result = apply_to_job(r, Path(r["pdf"]), driver)
+        
+        # Step 3.1: Upload tailored resume to profile
+        upload_profile_resume(driver, new_pdf_path)
+        
+        # Step 3.2: Apply
+        result = apply_to_job(r, new_pdf_path, driver)
         r.update(result)
+        
+        # Update DB status
+        db.update_job_status(r["url"], r["title"], r["company"], r["status"])
+        
         print(f"  Status  : {r['status']}")
         if r.get("error"):
             print(f"  Error   : {r['error']}")

@@ -6,6 +6,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from agent.applicator import build_driver
+from agent import db
 
 
 def _load_config() -> dict:
@@ -60,7 +61,7 @@ def _scrape_role_selenium(driver, role: str, days: int, max_pages: int, seen_url
         new_on_page = 0
         for card in cards:
             job_url = _extract_url(card)
-            if not job_url or job_url in seen_urls:
+            if not job_url or job_url in seen_urls or db.is_processed(job_url):
                 continue
 
             posted = _extract_posted(card)
@@ -75,6 +76,7 @@ def _scrape_role_selenium(driver, role: str, days: int, max_pages: int, seen_url
                     "url": job_url,
                     "posted": posted,
                     "snippet": _text(card, ".job-desc, .jobDescription"),
+                    "tags": _extract_tags(card),
                 }
             )
             new_on_page += 1
@@ -86,12 +88,6 @@ def _scrape_role_selenium(driver, role: str, days: int, max_pages: int, seen_url
 
 
 def fetch_jd(url: str) -> str:
-    # We'll use a temporary driver for JD fetch to avoid complicating fetch_jobs
-    # or we could pass the driver around. For simplicity, we'll open a new one
-    # if this is called outside the main loop, but run.py calls it inside.
-    # Actually, fetch_jobs returns jobs, then run.py calls fetch_jd for each.
-    # Let's use a single driver in run.py instead? No, let's keep it simple here.
-    
     driver = build_driver()
     try:
         driver.get(url)
@@ -138,6 +134,16 @@ def extract_keywords(jd_text: str) -> list[str]:
     return matched
 
 
+def _extract_tags(card) -> list[str]:
+    tags = []
+    # Tags in srp-jobtuple-wrapper structure
+    for tag_el in card.select(".tags-gt .tag-li, .dot-gt"):
+        text = tag_el.get_text(strip=True).lower()
+        if text and text not in tags:
+            tags.append(text)
+    return tags
+
+
 def _text(card, selector: str) -> str:
     element = card.select_one(selector)
     return element.get_text(strip=True) if element else ""
@@ -173,4 +179,3 @@ def _within_days(posted_text: str, days: int) -> bool:
     if match:
         return int(match.group(1)) * 7 <= days
     return True
-
