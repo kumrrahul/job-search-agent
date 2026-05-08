@@ -1,6 +1,7 @@
-node_modules/
 .env
-.evn
-data/
-reports/
-npm-debug.log*
+tmp/*
+!tmp/.gitkeep
+__pycache__/
+*.py[cod]
+.venv/
+

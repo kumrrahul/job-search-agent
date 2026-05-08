@@ -1,0 +1,124 @@
+import smtplib
+import ssl
+from datetime import datetime
+from email.mime.application import MIMEApplication
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from pathlib import Path
+
+from agent import secrets
+
+
+def send_summary(results: list[dict]) -> None:
+    applied = [r for r in results if r["status"] == "applied"]
+    failed = [r for r in results if r["status"] == "failed"]
+    skipped = [r for r in results if r["status"] == "already_applied"]
+    low_match = [r for r in results if r["status"] == "skipped_low_match"]
+    dry_run = [r for r in results if r["status"] == "dry_run"]
+
+    msg = MIMEMultipart("mixed")
+    warning_count = sum(1 for r in results if r.get("resume_warning"))
+    msg["Subject"] = (
+        f"Naukri Applications - {len(applied)} applied | "
+        f"{len(failed)} failed | {warning_count} resume warnings | "
+        f"{datetime.now().strftime('%d %b %Y')}"
+    )
+    msg["From"] = secrets.get("SMTP_USER")
+    msg["To"] = secrets.get("NOTIFY_TO")
+    msg.attach(MIMEText(_build_html(applied, failed, skipped, dry_run, low_match), "html"))
+
+    seen: set[str] = set()
+    for result in applied:
+        pdf = Path(result.get("pdf", ""))
+        if pdf.exists() and str(pdf) not in seen:
+            seen.add(str(pdf))
+            with pdf.open("rb") as f:
+                part = MIMEApplication(f.read(), Name=pdf.name)
+                part["Content-Disposition"] = f'attachment; filename="{pdf.name}"'
+                msg.attach(part)
+
+    ctx = ssl.create_default_context()
+    with smtplib.SMTP(secrets.get("SMTP_HOST"), int(secrets.get("SMTP_PORT"))) as smtp:
+        smtp.ehlo()
+        smtp.starttls(context=ctx)
+        smtp.ehlo()
+        smtp.login(secrets.get("SMTP_USER"), secrets.get("SMTP_PASS"))
+        smtp.send_message(msg)
+
+    print(f"  Email sent to {secrets.get('NOTIFY_TO')}")
+
+
+def _build_html(applied, failed, skipped, dry_run, low_match) -> str:
+    date_str = datetime.now().strftime("%d %B %Y, %I:%M %p")
+
+    def rows(items, badge_color, badge_label):
+        if not items:
+            return ""
+        output = ""
+        for result in items:
+            pdf_name = Path(result.get("pdf", "")).name or "-"
+            match_report = result.get("match_report", {})
+            match_text = ""
+            if match_report:
+                matched = ", ".join(match_report.get("matched_skills", [])[:8])
+                missing = ", ".join(match_report.get("missing_skills", [])[:8])
+                match_text = (
+                    f"ATS match: {match_report.get('match_percent')}%<br>"
+                    f"Matched: {matched or '-'}<br>"
+                    f"Missing: {missing or '-'}"
+                )
+            notes = "<br>".join(
+                note
+                for note in [
+                    match_text,
+                    result.get("resume_warning", ""),
+                    result.get("error", ""),
+                    *result.get("application_notes", []),
+                ]
+                if note
+            )
+            output += (
+                "<tr>"
+                f"<td><a href='{result['url']}' style='color:#1a56db'>{result['title']}</a></td>"
+                f"<td>{result['company']}</td>"
+                f"<td><span style='background:{badge_color};color:#fff;"
+                f"padding:2px 8px;border-radius:4px;font-size:12px'>{badge_label}</span></td>"
+                f"<td style='font-size:12px;color:#555'>{pdf_name}</td>"
+                f"<td style='font-size:11px;color:#e00'>{notes}</td>"
+                "</tr>"
+            )
+        return output
+
+    table_rows = (
+        rows(applied, "#16a34a", "Applied")
+        + rows(skipped, "#6b7280", "Already applied")
+        + rows(low_match, "#9333ea", "Skipped low match")
+        + rows(failed, "#dc2626", "Failed")
+        + rows(dry_run, "#d97706", "Dry run")
+    )
+
+    return f"""
+<!DOCTYPE html>
+<html><body style="font-family:Arial,sans-serif;color:#222;max-width:900px;margin:0 auto">
+  <h2 style="border-bottom:2px solid #1a56db;padding-bottom:8px">
+    Naukri Job Application Summary
+  </h2>
+  <p style="color:#555">{date_str}</p>
+  <table border="0" cellpadding="8" cellspacing="0"
+    style="width:100%;border-collapse:collapse;border:1px solid #e5e7eb">
+    <thead>
+      <tr style="background:#f9fafb;font-size:13px;text-align:left">
+        <th style="border-bottom:1px solid #e5e7eb">Job title</th>
+        <th style="border-bottom:1px solid #e5e7eb">Company</th>
+        <th style="border-bottom:1px solid #e5e7eb">Status</th>
+        <th style="border-bottom:1px solid #e5e7eb">Resume file</th>
+        <th style="border-bottom:1px solid #e5e7eb">Notes</th>
+      </tr>
+    </thead>
+    <tbody style="font-size:13px">{table_rows}</tbody>
+  </table>
+  <p style="margin-top:20px;font-size:12px;color:#9ca3af">
+    Tailored resumes are attached to this email for applied jobs.<br>
+    Generated by Naukri Agent.
+  </p>
+</body></html>"""

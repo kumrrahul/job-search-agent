@@ -1,0 +1,145 @@
+# ─────────────────────────────────────────────
+#  config.yaml  —  Naukri Agent configuration
+#  Matched to Rahul Kumar's resume (base.tex)
+# ─────────────────────────────────────────────
+
+# Job titles to search for on Naukri
+# These are equivalent roles — agent tries each one
+role_aliases:
+  - "Java Backend Developer"
+  - "Software Development Engineer"
+  - "Software Engineer"
+  - "SDE"
+  - "Backend Engineer"
+  - "Java Developer"
+  - "Microservices Developer"
+
+# ── Skill categories exactly as they appear in base.tex ──────────────────────
+# Key   = the \textbf{Category:} label in the skills section
+# Value = list of individual skills listed under that category
+#
+# RULE: Never add a skill here that is NOT in base.tex.
+#       The resume engine only works within this set.
+skill_categories:
+  Programming:
+    - Java
+    - SQL
+    - Object-Oriented Programming
+    - Data Structures and Algorithms
+
+  Backend & APIs:
+    - Microservices
+    - REST APIs
+    - Helidon
+    - Spring Boot
+    - Spring MVC
+    - OpenAPI
+
+  Testing:
+    - JUnit 5
+    - Mockito
+    - Selenium WebDriver
+    - Mocha
+    - Postman
+
+  Cloud & Dev Tools:
+    - Maven
+    - Git
+    - Docker
+    - Helm
+    - Kubernetes
+    - Lens
+    - IntelliJ IDEA
+    - DBeaver
+
+  Databases & Platforms:
+    - Oracle Database
+    - Apache Kafka
+    - Redis
+
+  Concepts:
+    - Design Patterns
+    - Low-Level Design
+    - System Design
+    - Performance Optimization
+    - Debugging
+    - Troubleshooting
+    - Production Support
+
+# ── JD keyword → resume skill mapping ────────────────────────────────────────
+# When a JD mentions the keyword (left), it counts as a match for the
+# resume skill (right).  Add synonyms as needed.
+keyword_aliases:
+  springboot: "Spring Boot"
+  "spring boot": "Spring Boot"
+  "spring mvc": "Spring MVC"
+  "spring framework": "Spring Boot"
+  microservice: "Microservices"
+  microservices: "Microservices"
+  "rest api": "REST APIs"
+  restful: "REST APIs"
+  rest: "REST APIs"
+  kafka: "Apache Kafka"
+  "apache kafka": "Apache Kafka"
+  kubernetes: "Kubernetes"
+  k8s: "Kubernetes"
+  docker: "Docker"
+  helm: "Helm"
+  junit: "JUnit 5"
+  mockito: "Mockito"
+  selenium: "Selenium WebDriver"
+  postman: "Postman"
+  oracle: "Oracle Database"
+  redis: "Redis"
+  "system design": "System Design"
+  "low level design": "Low-Level Design"
+  lld: "Low-Level Design"
+  "design pattern": "Design Patterns"
+  git: "Git"
+  maven: "Maven"
+  openapi: "OpenAPI"
+  swagger: "OpenAPI"
+  helidon: "Helidon"
+  debugging: "Debugging"
+  "production support": "Production Support"
+  oops: "Object-Oriented Programming"
+  oop: "Object-Oriented Programming"
+  dsa: "Data Structures and Algorithms"
+
+# ── Summary rewrite fragments ─────────────────────────────────────────────────
+# The summary line will be rebuilt emphasising the top matched skills.
+# This is the base — matched keywords are appended dynamically.
+summary_base: >
+  Java Backend Developer with 3+ years of experience in backend development,
+  microservices architecture, REST APIs, system design, and integration testing
+  for enterprise platforms.
+
+# ── Run limits ────────────────────────────────────────────────────────────────
+limits:
+  max_jobs: 10
+  days_back: 7
+  apply_delay_seconds: 3   # polite pause between applications
+  max_pages: 5             # Naukri search pages to scrape
+
+resume:
+  preferred_pages: 1        # warn by email if tailored PDF spills beyond this
+
+application_answers:
+  total_experience_years: 4
+  current_location: "Hyderabad"
+  preferred_locations:
+    - "Hyderabad"
+    - "Bangalore"
+    - "Pune"
+    - "Delhi NCR"
+    - "Gurgaon"
+  notice_period: "30 days"
+  current_ctc: "2400000"
+  expected_ctc: "3600000"
+  relevant_skill_experience: "4 years"
+  missing_skill_answer: "NA"
+  availability_to_relocate: "Yes"
+  work_mode_preference: "Full time"
+
+matching:
+  min_apply_match_percent: 5
