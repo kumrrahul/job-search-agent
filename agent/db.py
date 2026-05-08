@@ -28,7 +28,7 @@ def is_processed(url: str) -> bool:
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cursor.execute(
-        "SELECT status FROM processed_jobs WHERE url = ? AND status IN ('applied', 'already_applied', 'skipped_low_match')",
+        "SELECT status FROM processed_jobs WHERE url = ? AND status IN ('applied', 'already_applied', 'skipped_low_match', 'skipped_external')",
         (url,),
     )
     result = cursor.fetchone()

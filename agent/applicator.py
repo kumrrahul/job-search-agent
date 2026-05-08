@@ -179,6 +179,25 @@ def _complete_application_prompts(driver: webdriver.Chrome, result: dict) -> str
     return None
 
 
+def _is_external_apply(driver: webdriver.Chrome) -> bool:
+    """Checks if the apply button points to an external site."""
+    page_text = driver.page_source.lower()
+    if "apply on company site" in page_text:
+        return True
+    
+    # Check specifically in buttons/links
+    external_keywords = ["apply on company site", "apply on company website"]
+    for text in external_keywords:
+        xpath = f"//*[contains(translate(normalize-space(.), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), '{text}')]"
+        try:
+            elements = driver.find_elements(By.XPATH, xpath)
+            if any(el.is_displayed() for el in elements):
+                return True
+        except Exception:
+            continue
+    return False
+
+
 def _has_applied_state(driver: webdriver.Chrome) -> bool:
     page_text = driver.page_source.lower()
     if any(text in page_text for text in ["already applied", "applied successfully", "application submitted"]):

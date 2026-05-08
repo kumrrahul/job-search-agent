@@ -164,7 +164,7 @@ def main():
     # ── Final summary ────────────────────────────────────────────
     applied  = sum(1 for r in results if r["status"] == "applied")
     failed   = sum(1 for r in results if r["status"] == "failed")
-    skipped  = sum(1 for r in results if r["status"] == "already_applied")
+    skipped  = sum(1 for r in results if r["status"] in {"already_applied", "skipped_external"})
     low_match = sum(1 for r in results if r["status"] == "skipped_low_match")
 
     print("\n" + "=" * 55)
