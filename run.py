@@ -6,20 +6,17 @@ Usage:
   python run.py                      # full run (scrape → tailor → apply → email)
   python run.py --dry-run            # scrape + tailor only, no apply, no email
   python run.py --dry-run --limit 2  # test with 2 jobs
+  python run.py --check              # validate local setup
   python run.py --no-email           # apply but skip email
   python run.py --limit 5            # cap at 5 applications
 """
 import argparse
 import traceback
-import yaml
 from datetime import datetime
 from pathlib import Path
 import shutil
-from agent.scraper    import fetch_jobs, fetch_jd, extract_keywords
-from agent.resume     import tailor_resume
-from agent.applicator import build_driver, login, apply_to_job, upload_profile_resume
-from agent.reporter   import send_summary
-from agent.match      import build_match_report
+import sys
+from agent.checks     import run_setup_check
 from agent            import db
 
 
@@ -36,7 +33,20 @@ def main():
                         help="Max number of jobs to process")
     parser.add_argument("--days",     type=int, default=None,
                         help="How many days back to look for jobs")
+    parser.add_argument("--check",    action="store_true",
+                        help="Validate local setup and exit")
     args = parser.parse_args()
+
+    if args.check:
+        sys.exit(0 if run_setup_check() else 1)
+
+    import yaml
+
+    from agent.scraper    import fetch_jobs, fetch_jd, extract_keywords
+    from agent.resume     import tailor_resume
+    from agent.applicator import build_driver, login, apply_to_job, upload_profile_resume
+    from agent.reporter   import send_summary
+    from agent.match      import build_match_report
 
     # Load limits from config (CLI args override config)
     with open("config.yaml") as f:

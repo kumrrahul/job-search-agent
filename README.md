@@ -23,9 +23,25 @@ Fill `.env` with Naukri and SMTP credentials.
 
 ```bash
 python run.py --dry-run --limit 2
+python run.py --check
 python run.py --limit 5
 python run.py --no-email
 ```
+
+Run `python run.py --check` after setup to verify required files, environment
+variables, Python packages, `pdflatex`, and Chrome before launching the agent.
+
+## ATS Match
+
+The ATS match score compares skills found in the JD against skills available in
+`resumes/base.tex`:
+
+```text
+ATS match % = matched JD skills present in resume / total JD skills * 100
+```
+
+JD skills are collected from Naukri job tags and extracted JD keywords, then
+normalized through `keyword_aliases` in `config.yaml`.
 
 `pdflatex` must be installed and available on `PATH` for resume PDF generation. On macOS, BasicTeX is enough:
 
